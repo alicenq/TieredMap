@@ -197,6 +197,7 @@ public class TieredMap<K, V> implements Map<K, V> {
     // - hashCode
     // - isEmpty
     // - keySet
+    // - remove
     // - size
     // - values
     @Override
@@ -240,6 +241,16 @@ public class TieredMap<K, V> implements Map<K, V> {
     }
 
     @Override
+    public V remove(Object key) {
+        return data.remove(key);
+    }
+
+    @Override
+    public int size() {
+        return data.size();
+    }
+
+    @Override
     public java.util.Collection<V> values() {
         return data.values();
     }
@@ -249,7 +260,6 @@ public class TieredMap<K, V> implements Map<K, V> {
     // - equals (2)
     // - put
     // - putAll
-    // - remove
     // - toString
     /**
      * Method which returns a sibling of this map with the same data as this map
@@ -318,6 +328,68 @@ public class TieredMap<K, V> implements Map<K, V> {
 
     @Override
     public String toString() {
-        return generation + ':' + data.toString();
+        return "(" + generation + ')' + data.toString();
+    }
+
+    // CUSTOM METHODS
+    // - toGraph
+    // - inherit
+    // - containsKeyInFamily
+    // - containsValueInFamily
+    /**
+     * Generates a graph representation of this map and all those directly above
+     * it, including the number of keys in each of them
+     *
+     * @return a String representation of this map and all direct parents
+     */
+    public String toGraph() {
+        if (parent == null) {
+            return "" + data.size();
+        } else {
+            return parent.toGraph() + "<" + data.size();
+        }
+    }
+
+    /**
+     * Inherits a value as a given key from a TieredMap higher up in the
+     * hierarchy. Note that this does nothing when used on a root map, and puts
+     * that value under the same key as its parents.
+     *
+     * @param key the key at which the value to inherit lays
+     * @return the inherited value
+     */
+    public V inherit(K key) {
+        if (parent == null) {
+            return get(key);
+        } else {
+            V value = parent.inherit(key);
+            data.put(key, value);
+            return value;
+        }
+    }
+
+    /**
+     * Checks if a value exists for a given key anywhere in the entirety of the
+     * upper hierarchy. This does not however guarantee that a value exists
+     * under the key in this particular instance.
+     *
+     * @param key the key value to check
+     * @return true if a valid value exists under the provided key somewhere in
+     * the structure
+     */
+    public boolean containsKeyInFamily(K key) {
+        return getRoot().containsKey(key);
+    }
+
+    /**
+     * Checks if a given value is stored anywhere within the entirety of the
+     * upper hierarchy. This does not however guarantee that the value exists in
+     * this particular instance.
+     *
+     * @param value the value to check if it exists
+     * @return true if the value is stored in the entirety of the data structure
+     */
+    public boolean containsValueInFamily(V value) {
+        return getRoot().containsValue(value);
     }
 }

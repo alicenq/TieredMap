@@ -38,6 +38,6 @@ public class TestProgram {
      * @param args unused
      */
     public static void main(String[] args) {
-        TieredMap<String, Integer> root = TieredMap.newFamily();
+     
     }
 }
