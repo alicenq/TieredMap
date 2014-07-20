@@ -38,6 +38,35 @@ public class TestProgram {
      * @param args unused
      */
     public static void main(String[] args) {
-     
+        TieredMap root = new TieredMap();
+
+        TieredMap a0 = root.child();
+        TieredMap b0 = root.child();
+        TieredMap c0 = root.child();
+
+        TieredMap c1 = c0.child();
+        TieredMap c2 = c1.child();
+
+        TieredMap c3 = c1.sibling();
+
+        TieredMap d1 = c3.child();
+        TieredMap e1 = d1.child();
+
+        a0.put("a0", 0);
+        b0.put("b0", 0);
+        c0.put("c0", 0);
+        c1.put("c1", 1);
+        c2.put("c2", 2);
+        c3.put("c3", 3);
+        d1.put("d1", 1);
+        e1.inherit("d1");
+        e1.inherit("a0");
+
+        TieredMap a1 = a0.child();
+
+        System.out.println(TieredMap.toGraph(c2));
+
+        c0.detach();
+        System.out.println(c0.getChildren());
     }
 }

@@ -24,6 +24,7 @@
 package rogue.util;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 /**
@@ -51,16 +52,17 @@ public class TieredMap<K, V> implements Map<K, V> {
     // DATA STORAGE
     private Map<K, V> data;
 
-    // THE NUMBER OF GENERATIONS
-    private int generation;
+    // A LIST OF ALL THE CHILDREN
+    private LinkedList<TieredMap> children;
 
     // CREATION METHODS
     // - constructor (2)
-    // - getChild
-    // - getSibling
+    // - child
+    // - sibling
     // - getParent
     // - getRoot
     // - getNewRoot
+    // - getChildren
     /**
      * Basic constructor which creates a new root map - that is, a map without a
      * parent. As a root map this map will contain more data than any of its
@@ -68,8 +70,8 @@ public class TieredMap<K, V> implements Map<K, V> {
      */
     public TieredMap() {
         parent = null;
+        children = new LinkedList();
         data = new HashMap();
-        generation = 0;
     }
 
     /**
@@ -81,8 +83,8 @@ public class TieredMap<K, V> implements Map<K, V> {
      */
     public TieredMap(TieredMap<K, V> source) {
         parent = null;
+        children = new LinkedList();
         data = new HashMap(source.data);
-        generation = 0;
     }
 
     /**
@@ -94,8 +96,8 @@ public class TieredMap<K, V> implements Map<K, V> {
      */
     public TieredMap(Map<K, V> source) {
         parent = null;
+        children = new LinkedList();
         data = new HashMap(source);
-        generation = 0;
     }
 
     /**
@@ -104,10 +106,10 @@ public class TieredMap<K, V> implements Map<K, V> {
      * @return a new empty TieredMap of the same type as this map with this as
      * its parent
      */
-    public TieredMap<K, V> getChild() {
+    public TieredMap<K, V> child() {
         TieredMap<K, V> map = new TieredMap();
         map.parent = this;
-        map.generation = this.generation + 1;
+        children.add(map);
         return map;
     }
 
@@ -120,13 +122,15 @@ public class TieredMap<K, V> implements Map<K, V> {
      * parent as this one
      * @throws UnsupportedOperationException when this has no parent
      */
-    public TieredMap<K, V> getSibling() {
+    public TieredMap<K, V> sibling() {
         if (parent == null) {
             throw new UnsupportedOperationException("May not create sibling of root map");
         }
+
         TieredMap<K, V> map = new TieredMap();
         map.parent = parent;
-        map.generation = this.generation;
+        parent.children.add(map);
+
         return map;
     }
 
@@ -166,16 +170,45 @@ public class TieredMap<K, V> implements Map<K, V> {
         return new TieredMap(this);
     }
 
+    /**
+     * Allows access to all the children belonging to this particular instance
+     *
+     * @return a Collection of all the TieredMap children
+     */
+    public java.util.Collection<TieredMap> getChildren() {
+        return children;
+    }
+
     // DATA METHODS
     // - isRoot
+    // - isLeaf
+    // - getNumChildren
     // - getGeneration
     /**
-     * Method to check if this map is a root map
+     * Checks if this map is a root map
      *
      * @return true when this has no parent :(
      */
     public boolean isRoot() {
         return parent == null;
+    }
+
+    /**
+     * Checks if this map is a leaf node in the entirety of the tree
+     *
+     * @return true if this map has no children
+     */
+    public boolean isLeaf() {
+        return children.isEmpty();
+    }
+
+    /**
+     * Method to check the number of children this map has
+     *
+     * @return the number of depending children
+     */
+    public int getNumChildren() {
+        return children.size();
     }
 
     /**
@@ -185,7 +218,11 @@ public class TieredMap<K, V> implements Map<K, V> {
      * @return the number of parents and grandparents this object has
      */
     public int getGeneration() {
-        return generation;
+        if (parent == null) {
+            return 0;
+        } else {
+            return 1 + parent.getGeneration();
+        }
     }
 
     // REDIRECTED OVERWRITTEN METHODS METHODS
@@ -197,7 +234,6 @@ public class TieredMap<K, V> implements Map<K, V> {
     // - hashCode
     // - isEmpty
     // - keySet
-    // - remove
     // - size
     // - values
     @Override
@@ -206,12 +242,14 @@ public class TieredMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public boolean containsKey(Object key) {
+    public boolean containsKey(Object key
+    ) {
         return data.containsKey(key);
     }
 
     @Override
-    public boolean containsValue(Object value) {
+    public boolean containsValue(Object value
+    ) {
         return data.containsValue(value);
     }
 
@@ -221,7 +259,8 @@ public class TieredMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public V get(Object key) {
+    public V get(Object key
+    ) {
         return data.get(key);
     }
 
@@ -241,11 +280,6 @@ public class TieredMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public V remove(Object key) {
-        return data.remove(key);
-    }
-
-    @Override
     public int size() {
         return data.size();
     }
@@ -260,6 +294,7 @@ public class TieredMap<K, V> implements Map<K, V> {
     // - equals (2)
     // - put
     // - putAll
+    // - remove
     // - toString
     /**
      * Method which returns a sibling of this map with the same data as this map
@@ -273,7 +308,6 @@ public class TieredMap<K, V> implements Map<K, V> {
 
         map.data = new HashMap(data);
         map.parent = this.parent;
-        map.generation = this.generation;
 
         return map;
     }
@@ -326,30 +360,31 @@ public class TieredMap<K, V> implements Map<K, V> {
         }
     }
 
+    /**
+     * Method to remove a value from a given key from this map and all maps
+     * below it
+     *
+     * @param key the key to remove
+     * @return the value previously held at the given key
+     */
+    @Override
+    public V remove(Object key) {
+        for (TieredMap child : children) {
+            child.remove(key);
+        }
+        return data.remove(key);
+    }
+
     @Override
     public String toString() {
-        return "(" + generation + ')' + data.toString();
+        return data.toString();
     }
 
     // CUSTOM METHODS
-    // - toGraph
     // - inherit
+    // - detach
     // - containsKeyInFamily
     // - containsValueInFamily
-    /**
-     * Generates a graph representation of this map and all those directly above
-     * it, including the number of keys in each of them
-     *
-     * @return a String representation of this map and all direct parents
-     */
-    public String toGraph() {
-        if (parent == null) {
-            return "" + data.size();
-        } else {
-            return parent.toGraph() + "<" + data.size();
-        }
-    }
-
     /**
      * Inherits a value as a given key from a TieredMap higher up in the
      * hierarchy. Note that this does nothing when used on a root map, and puts
@@ -363,9 +398,24 @@ public class TieredMap<K, V> implements Map<K, V> {
             return get(key);
         } else {
             V value = parent.inherit(key);
-            data.put(key, value);
+            if (value != null) {
+                data.put(key, value);
+            }
             return value;
         }
+    }
+
+    /**
+     * Method which detaches this node from the family to become the head of its
+     * own family
+     *
+     * @return the former parent of this instance
+     */
+    public TieredMap<K, V> detach() {
+        TieredMap oldParent = parent;
+        parent.children.remove(this);
+        parent = null;
+        return oldParent;
     }
 
     /**
@@ -391,5 +441,46 @@ public class TieredMap<K, V> implements Map<K, V> {
      */
     public boolean containsValueInFamily(V value) {
         return getRoot().containsValue(value);
+    }
+
+    // STATIC METHODS
+    // - toGraph
+    /**
+     * Constructor method which creates a multi-line String representation of
+     * the entire family graph this belongs to
+     *
+     * @param map a map from the family to plot
+     * @return a String representation of the entire structure
+     */
+    public static String toGraph(TieredMap map) {
+        TieredMap root = map.getRoot();
+        return toGraph(root, 0);
+    }
+
+    /**
+     * Constructor method which creates a multi-line String representation of
+     * this map and all of its children
+     *
+     * @param map a map from the family to plot
+     * @return a String representation of the entire structure with this as its
+     * head
+     */
+    public static String toPartialGraph(TieredMap map) {
+        return toGraph(map, 0);
+    }
+
+    // RECURSIVE INTERNAL METHOD
+    private static String toGraph(TieredMap map, int depth) {
+        String s = "" + map.data;
+
+        for (TieredMap child : (LinkedList<TieredMap>) map.children) {
+            s += "\n";
+            for (int i = 0; i < depth; i++) {
+                s += ' ';
+            }
+            s += toGraph(child, depth + 1);
+        }
+
+        return s;
     }
 }
